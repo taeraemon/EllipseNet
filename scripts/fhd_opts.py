@@ -237,7 +237,7 @@ class opts(object):
 
   def parse(self, args=''):
     if args == '':
-      opt = self.parser.parse_args()
+      opt = self.parser.parse_args([])
     else:
       opt = self.parser.parse_args(args)
 

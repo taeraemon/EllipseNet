@@ -2,8 +2,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import math
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from .utils import _gather_feat, _transpose_and_gather_feat
 
 def _nms(heat, kernel=3):
@@ -493,6 +495,107 @@ def ctdet_decode(heat, wh, reg=None, cat_spec_wh=False, K=100):
     detections = torch.cat([bboxes, scores, clses], dim=2)
       
     return detections
+
+
+def eldet_decode(heat, l, ratio_al, ratio_ba, theta, reg=None, cat_spec_wh=False, K=2): # Decode ellipse information
+    batch, cat, height, width = heat.size()
+
+    # heat = torch.sigmoid(heat)
+    # perform nms on heatmaps
+    heat = _nms(heat)
+      
+    scores, inds, clses, ys, xs = _topk(heat, K=K)
+    if reg is not None:
+      reg = _transpose_and_gather_feat(reg, inds)
+      reg = reg.view(batch, K, 2)
+      xs = xs.view(batch, K, 1) + reg[:, :, 0:1]
+      ys = ys.view(batch, K, 1) + reg[:, :, 1:2]
+    else:
+      xs = xs.view(batch, K, 1) + 0.5
+      ys = ys.view(batch, K, 1) + 0.5
+    l = _transpose_and_gather_feat(l, inds)
+    ratio_al = _transpose_and_gather_feat(ratio_al, inds)
+    ratio_ba = _transpose_and_gather_feat(ratio_ba, inds)
+    theta = _transpose_and_gather_feat(theta, inds)
+    if cat_spec_wh:
+      l = l.view(batch, K, cat, 1)
+      clses_ind = clses.view(batch, K, 1, 1).expand(batch, K, 1, 2).long()
+      l = l.gather(1, clses_ind).view(batch, K, 1)
+    else:
+      l = l.view(batch, K, 1)
+    clses  = clses.view(batch, K, 1).float()
+    scores = scores.view(batch, K, 1)
+    bboxes = torch.cat([xs - l / 2, 
+                        ys - l / 2,
+                        xs + l / 2, 
+                        ys + l / 2], dim=2)
+#     print(bboxes.shape, xs.shape, ys.shape, l.shape, ratio_al.shape, ratio_ba.shape, theta.shape, scores.shape, clses.shape)
+#     print('bboxes:', bboxes, 'xs:', xs, 'ys:', ys, 'l:', l, 'ratio_al:', ratio_al, 'ratio_ba:', ratio_ba, 'theta:', theta, 'scores:', scores, 'clses:', clses)
+    detections = torch.cat([bboxes, xs, ys, l, ratio_al, ratio_ba, theta, scores, clses], dim=2)
+      
+    return detections
+
+
+def decode_label_4iou(label, K=2): # Decode label for iou loss
+    heat = label['hm']
+    reg = label['reg']
+    l = label['l']
+    ratio_al = label['ratio_al']
+    ratio_ba = label['ratio_ba']
+    theta = label['theta']
+    batch, cat, height, width = heat.size()
+
+    # perform nms on heatmaps
+    heat = _nms(heat)
+      
+    scores, inds, clses, ys, xs = _topk(heat, K=K) # (B, K)
+    if reg is not None:
+        reg = reg.view(batch, K, 2)
+        xs = xs.view(batch, K, 1) + reg[:, :, 0:1]
+        ys = ys.view(batch, K, 1) + reg[:, :, 1:2]
+    else:
+        xs = xs.view(batch, K, 1) + 0.5
+        ys = ys.view(batch, K, 1) + 0.5
+    a = l * ratio_al / 2
+    b = a * ratio_ba
+    angle = theta * math.pi
+
+    bboxes = torch.cat([xs, ys, 2*a, 2*b, angle], dim=2)
+    return bboxes
+
+
+def decode_output_4iou(output, K=2): # Decode output for iou loss
+    heat = F.sigmoid(output['hm']) # (B, 2, w, h)
+    l = output['l'] # (B, 1, w, h)
+    ratio_al = output["ratio_al"] # (B, 1, w, h)
+    ratio_ba = output["ratio_ba"] # (B, 1, w, h)
+    theta = output["theta"] # (B, 2, w, h)
+    reg = output['reg'] # (B, 2, w, h)
+
+    batch, cat, height, width = heat.size()
+    heat = _nms(heat)
+    scores, inds, clses, ys, xs = _topk(heat, K=K)
+
+    if reg is not None:
+        reg = _transpose_and_gather_feat(reg, inds)  # (B, K, 1)
+        reg = reg.view(batch, K, 2)
+        xs = xs.view(batch, K, 1) + reg[:, :, 0:1]
+        ys = ys.view(batch, K, 1) + reg[:, :, 1:2]
+    else:
+        xs = xs.view(batch, K, 1) + 0.5
+        ys = ys.view(batch, K, 1) + 0.5
+
+    l = _transpose_and_gather_feat(l, inds) # (B, K, 1)
+    ratio_al = _transpose_and_gather_feat(ratio_al, inds) # (B, K, 1)
+    ratio_ba = _transpose_and_gather_feat(ratio_ba, inds) # (B, K, 1)
+    theta = _transpose_and_gather_feat(theta, inds) # (B, K, 1)
+
+    a = l * ratio_al / 2
+    b = a * ratio_ba
+    angle = theta * math.pi
+
+    bboxes = torch.cat([xs, ys, 2*a, 2*b, angle], dim=2)
+    return bboxes
 
 def multi_pose_decode(
     heat, wh, kps, reg=None, hm_hp=None, hp_offset=None, K=100):

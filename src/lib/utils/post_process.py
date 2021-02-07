@@ -3,9 +3,10 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-from .image import transform_preds
+from .image import transform_preds, transform_length
 from .ddd_utils import ddd2locrot
 
+import pdb
 
 def get_pred_depth(depth):
   return depth
@@ -96,6 +97,30 @@ def ctdet_post_process(dets, c, s, h, w, num_classes):
       top_preds[j + 1] = np.concatenate([
         dets[i, inds, :4].astype(np.float32),
         dets[i, inds, 4:5].astype(np.float32)], axis=1).tolist()
+    ret.append(top_preds)
+  return ret
+
+def eldet_post_process(dets, c, s, h, w, num_classes):
+  # dets: batch x max_dets x dim
+  # dets = [bboxes, cx, cy, l, ratio_al, ratio_ba, theta, scores, clses]
+  # return 1-based class det dict
+  ret = []
+  for i in range(dets.shape[0]):
+    top_preds = {}
+    dets[i, :, :2] = transform_preds(
+          dets[i, :, 0:2], c[i], s[i], (w, h))
+    dets[i, :, 2:4] = transform_preds(
+          dets[i, :, 2:4], c[i], s[i], (w, h))
+    dets[i, :, 4:6] = transform_preds( 
+          dets[i, :, 4:6], c[i], s[i], (w, h)) # center (xs, ys)
+    dets[i, :, 6] = transform_length( 
+          dets[i, :, 6], c[i], s[i], (w, h)) # l
+    classes = dets[i, :, -1]
+    for j in range(num_classes):
+      inds = (classes == j)
+      top_preds[j + 1] = np.concatenate([
+        dets[i, inds, :10].astype(np.float32),
+        dets[i, inds, -2:-1].astype(np.float32)], axis=1).tolist()
     ret.append(top_preds)
   return ret
 

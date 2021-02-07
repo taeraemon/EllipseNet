@@ -13,38 +13,31 @@ try:
 except:
   print('NMS not imported! If you need it,'
         ' do \n cd $CenterNet_ROOT/src/lib/external \n make')
-from models.decode import eldet_decode
+from models.decode import ctdet_decode
 from models.utils import flip_tensor
 from utils.image import get_affine_transform
-from utils.post_process import eldet_post_process
+from utils.post_process import ctdet_post_process
 from utils.debugger import Debugger
 
 from .base_detector import BaseDetector
 
-class EldetDetector(BaseDetector):
+class EldetBBOXDetector(BaseDetector):
   def __init__(self, opt):
-    super(EldetDetector, self).__init__(opt)
+    super(EldetBBOXDetector, self).__init__(opt)
   
   def process(self, images, return_time=False):
     with torch.no_grad():
       output = self.model(images)[-1]
       hm = output['hm'].sigmoid_()
-      l = output['l']
-      ratio_al = output["ratio_al"]
-      ratio_ba = output["ratio_ba"]
-      theta = output["theta"]
+      wh = output['wh']
       reg = output['reg'] if self.opt.reg_offset else None
       if self.opt.flip_test:
         hm = (hm[0:1] + flip_tensor(hm[1:2])) / 2
-        l = (l[0:1] + flip_tensor(l[1:2])) / 2
-        ratio_al = (ratio_al[0:1] + flip_tensor(ratio_al[1:2])) / 2
-        ratio_ba = (ratio_ba[0:1] + flip_tensor(ratio_ba[1:2])) / 2
-        theta = (theta[0:1] + flip_tensor(theta[1:2])) / 2
+        wh = (wh[0:1] + flip_tensor(wh[1:2])) / 2
         reg = reg[0:1] if reg is not None else None
       torch.cuda.synchronize()
       forward_time = time.time()
-      dets = eldet_decode(hm, l, ratio_al=ratio_al, ratio_ba=ratio_ba, theta=theta, 
-                          reg=reg, cat_spec_wh=self.opt.cat_spec_wh, K=self.opt.K)
+      dets = ctdet_decode(hm, wh, reg=reg, cat_spec_wh=self.opt.cat_spec_wh, K=self.opt.K)
       
     if return_time:
       return output, dets, forward_time
@@ -52,16 +45,14 @@ class EldetDetector(BaseDetector):
       return output, dets
 
   def post_process(self, dets, meta, scale=1):
-    # dets = [bboxes, cx, cy, l, ratio_al, ratio_ba, thetas, scores, clses]
-
     dets = dets.detach().cpu().numpy()
     dets = dets.reshape(1, -1, dets.shape[2])
-    dets = eldet_post_process(
+    dets = ctdet_post_process(
         dets.copy(), [meta['c']], [meta['s']],
         meta['out_height'], meta['out_width'], self.opt.num_classes)
     for j in range(1, self.num_classes + 1):
-      dets[0][j] = np.array(dets[0][j], dtype=np.float32).reshape(-1, 11)
-      dets[0][j][:, :7] /= scale
+      dets[0][j] = np.array(dets[0][j], dtype=np.float32).reshape(-1, 5)
+      dets[0][j][:, :4] /= scale
     return dets[0]
 
   def merge_outputs(self, detections):

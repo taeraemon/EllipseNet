@@ -14,8 +14,12 @@ from utils.image import gaussian_radius, draw_umich_gaussian, draw_msra_gaussian
 from utils.image import draw_dense_reg
 import math
 
+minimum, maximum = 0.6, 1.1
+
 class ELDetDataset(data.Dataset):
   def _coco_box_to_bbox(self, box):
+    # coco box: upper-left corner + width and height
+    # bounding box: upper-left corner and lower-right corner
     bbox = np.array([box[0], box[1], box[0] + box[2], box[1] + box[3]],
                     dtype=np.float32)
     return bbox
@@ -45,13 +49,17 @@ class ELDetDataset(data.Dataset):
     else:
       s = max(img.shape[0], img.shape[1]) * 1.0
       input_h, input_w = self.opt.input_h, self.opt.input_w
+      # When image is too large or too small
+      minimum = 1.0 if min(img.shape[0], img.shape[1]) < 384 else 0.6
+      maximum = 1.0 if min(img.shape[0], img.shape[1]) > 1024 else 1.1
     
     flipped = False
     if self.split == 'train':
       if not self.opt.not_rand_crop:
-        s = s * np.random.choice(np.arange(0.6, 1.4, 0.1))
-        w_border = self._get_border(128, img.shape[1])
-        h_border = self._get_border(128, img.shape[0])
+        io_scale = np.random.choice(np.arange(minimum, maximum, 0.1))
+        s = s * io_scale
+        w_border = self._get_border(384, img.shape[1])
+        h_border = self._get_border(384, img.shape[0])
         c[0] = np.random.randint(low=w_border, high=img.shape[1] - w_border)
         c[1] = np.random.randint(low=h_border, high=img.shape[0] - h_border)
       else:
@@ -63,9 +71,8 @@ class ELDetDataset(data.Dataset):
       
       if np.random.random() < self.opt.flip:
         flipped = True
-        img = img[:, ::-1, :]
+        img = img[:, ::-1, :] 
         c[0] =  width - c[0] - 1
-        
 
     trans_input = get_affine_transform(
       c, s, 0, [input_w, input_h])
@@ -83,18 +90,27 @@ class ELDetDataset(data.Dataset):
     num_classes = self.num_classes
     trans_output = get_affine_transform(c, s, 0, [output_w, output_h])
 
-    hm = np.zeros((num_classes, output_h, output_w), dtype=np.float32)
-    wh = np.zeros((self.max_objs, 2), dtype=np.float32)
-    dense_wh = np.zeros((2, output_h, output_w), dtype=np.float32)
-    reg = np.zeros((self.max_objs, 2), dtype=np.float32)
-    ind = np.zeros((self.max_objs), dtype=np.int64)
+    hm = np.zeros((num_classes, output_h, output_w), dtype=np.float32) # heat map of center point
+    wh = np.zeros((self.max_objs, 2), dtype=np.float32) # width and height
+    dense_wh = np.zeros((2, output_h, output_w), dtype=np.float32) # dense map of w and h
+    reg = np.zeros((self.max_objs, 2), dtype=np.float32) # regression of center point due to the float->int error
+    ind = np.zeros((self.max_objs), dtype=np.int64) # index of the center point
     reg_mask = np.zeros((self.max_objs), dtype=np.uint8)
-    cat_spec_wh = np.zeros((self.max_objs, num_classes * 2), dtype=np.float32)
+    cat_spec_wh = np.zeros((self.max_objs, num_classes * 2), dtype=np.float32) # category specific w,h and mask
     cat_spec_mask = np.zeros((self.max_objs, num_classes * 2), dtype=np.uint8)
     
     draw_gaussian = draw_msra_gaussian if self.opt.mse_loss else \
                     draw_umich_gaussian
 
+    # parameters for ellipse regression
+    l = np.zeros((self.max_objs, 1), dtype=np.float32) # length of the extended square
+    a = np.zeros((self.max_objs, 1), dtype=np.float32) # length of the long axis
+    b = np.zeros((self.max_objs, 1), dtype=np.float32) # length of the short axis
+    ratio_al = np.zeros((self.max_objs, 1), dtype=np.float32) # ratio of the long axis to the length of square
+    ratio_ba = np.zeros((self.max_objs, 1), dtype=np.float32) # ratio of the short axis to the long axis
+    theta = np.zeros((self.max_objs, 1), dtype=np.float32) # angle of the ellipse divided by pi (0, 1]
+
+    # Generate ground truth label
     gt_det = []
     for k in range(num_objs):
       ann = anns[k]
@@ -125,8 +141,21 @@ class ELDetDataset(data.Dataset):
           draw_dense_reg(dense_wh, hm.max(axis=0), ct_int, wh[k], radius)
         gt_det.append([ct[0] - w / 2, ct[1] - h / 2, 
                        ct[0] + w / 2, ct[1] + h / 2, 1, cls_id])
+
+      # parameters for ellipse regression
+      ellipse = ann['ellipse']
+      a[k] = trans_output[0][0] * ellipse[2] # length of the long axis
+      b[k] = trans_output[0][0] * ellipse[3] # length of the short axis
+      l[k] = 2 * math.sqrt(a[k] * a[k] + b[k] * b[k]) # length of the extended square
+      ratio_al[k] = 2 * a[k] / l[k] # ratio of the long axis to the length of square
+      ratio_ba[k] = b[k] / a[k] # ratio of the short axis to the long axis
+      angle = ellipse[4] / math.pi # ratio of the short axis to the long axis
+      angle = angle - 1 if angle > 0.5 else angle + 1 if angle < -0.5 else angle
+      # angle = angle if angle >= 0 else 1 + angle
+      theta[k] = -angle if flipped else angle
     
-    ret = {'input': inp, 'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh}
+    # ret = {'input': inp, 'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh}
+    ret = {'input': inp, 'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh, 'a': a, 'b': b, 'l': l, 'ratio_al': ratio_al, 'ratio_ba': ratio_ba, 'theta': theta}
     if self.opt.dense_wh:
       hm_a = hm.max(axis=0, keepdims=True)
       dense_wh_mask = np.concatenate([hm_a, hm_a], axis=0)

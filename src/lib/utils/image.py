@@ -24,6 +24,11 @@ def transform_preds(coords, center, scale, output_size):
     return target_coords
 
 
+def transform_length(length, center, scale, output_size):
+    trans = get_affine_transform(center, scale, 0, output_size, inv=1)
+    return length * trans[0][0]
+
+
 def get_affine_transform(center,
                          scale,
                          rot,

@@ -13,9 +13,9 @@ import torch.utils.data as data
 class COCOFHD(data.Dataset):
   num_classes = 2
   default_resolution = [512, 512]
-  mean = np.array([0, 0, 0],
+  mean = np.array([0.216, 0.216, 0.216],
                    dtype=np.float32).reshape(1, 1, 3)
-  std  = np.array([1, 1, 1],
+  std  = np.array([0.222, 0.222, 0.222],
                    dtype=np.float32).reshape(1, 1, 3)
 
   def __init__(self, opt, split):

@@ -479,6 +479,8 @@ class DLASeg(nn.Module):
         z = {}
         for head in self.heads:
             z[head] = self.__getattr__(head)(y[-1])
+            if head in ["ratio_al", "ratio_ba"]:
+                z[head] = F.sigmoid(z[head])
         return [z]
     
 

@@ -5,7 +5,7 @@ from __future__ import print_function
 import _init_paths
 
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '5'
 
 import torch
 import torch.utils.data
@@ -16,6 +16,8 @@ from models.data_parallel import DataParallel
 from logger import Logger
 from datasets.dataset_factory import get_dataset
 from trains.train_factory import train_factory
+
+from torch.utils.tensorboard import SummaryWriter
 
 
 def main(opt):

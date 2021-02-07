@@ -8,10 +8,15 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import math
 import torch
 import torch.nn as nn
 from .utils import _transpose_and_gather_feat
 import torch.nn.functional as F
+
+from .decode import decode_output_4iou, decode_label_4iou
+from .Rotated_IoU.utiles import box2corners
+from .Rotated_IoU.oriented_iou_loss import cal_diou, cal_giou
 
 
 def _slow_neg_loss(pred, gt):
@@ -111,6 +116,21 @@ def _reg_loss(regr, gt_regr, mask):
   regr_loss = regr_loss / (num + 1e-4)
   return regr_loss
 
+
+# Designed for angle regression
+def angle_loss(pred_angle, true_angle, size_average=False, use_smooth_l1=False):
+    diff_angle = (pred_angle - true_angle) * math.pi
+    sin, cos = torch.sin(diff_angle), torch.cos(diff_angle)
+    mask = torch.ones_like(cos)
+    mask[cos < 0] = -1
+    sin, cos = sin * mask, cos * mask #if cos >=0 else torch.atan2(-sin, -cos)
+    if use_smooth_l1:
+      loss = F.smooth_l1_loss(torch.atan2(sin, cos), torch.zeros_like(sin), size_average=False) 
+    else:
+      loss = F.l1_loss(torch.atan2(sin, cos), torch.zeros_like(sin), size_average=False) 
+    return loss
+
+
 class FocalLoss(nn.Module):
   '''nn.Module warpper for focal loss'''
   def __init__(self):
@@ -147,6 +167,34 @@ class RegL1Loss(nn.Module):
     loss = F.l1_loss(pred * mask, target * mask, size_average=False)
     loss = loss / (mask.sum() + 1e-4)
     return loss
+
+
+# Designed for angle regression
+class RegL1Loss4Angle(nn.Module):
+  def __init__(self, use_smooth_l1=False):
+    super(RegL1Loss4Angle, self).__init__()
+    self.use_smooth_l1 = use_smooth_l1
+  
+  def forward(self, output, mask, ind, target):
+    pred = _transpose_and_gather_feat(output, ind)
+    mask = mask.unsqueeze(2).expand_as(pred).float()
+    # loss = F.l1_loss(pred * mask, target * mask, reduction='elementwise_mean')
+    loss = angle_loss(pred * mask, target * mask, size_average=False, use_smooth_l1=self.use_smooth_l1)
+    loss = loss / (mask.sum() + 1e-4)
+    return loss
+
+
+# Designed for calculating Rotated IoU Loss
+class IoULoss(nn.Module):
+  def __init__(self):
+    super(IoULoss, self).__init__()
+  
+  def forward(self, output, target):
+    bbox_pred = decode_output_4iou(output)
+    bbox_label = decode_label_4iou(target)
+    iou_loss, iou = cal_diou(bbox_pred, bbox_label)
+    return iou_loss, iou
+
 
 class NormRegL1Loss(nn.Module):
   def __init__(self):
@@ -235,3 +283,11 @@ def compute_rot_loss(output, target_bin, target_res, mask):
           valid_output2[:, 7], torch.cos(valid_target_res2[:, 1]))
         loss_res += loss_sin2 + loss_cos2
     return loss_bin1 + loss_bin2 + loss_res
+
+class L1LossRegression(nn.Module):
+  def __init__(self):
+    super(L1LossRegression, self).__init__()
+  
+  def forward(self, output, target):
+    loss = F.l1_loss(output, target, reduction='elementwise_mean')
+    return loss
