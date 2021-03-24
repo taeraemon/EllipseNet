@@ -31,19 +31,19 @@ class EldetDetector(BaseDetector):
       hm = output['hm'].sigmoid_()
       l = output['l']
       ratio_al = output["ratio_al"]
-      ratio_ba = output["ratio_ba"]
+      ratio_bl = output["ratio_bl"]
       theta = output["theta"]
       reg = output['reg'] if self.opt.reg_offset else None
       if self.opt.flip_test:
         hm = (hm[0:1] + flip_tensor(hm[1:2])) / 2
         l = (l[0:1] + flip_tensor(l[1:2])) / 2
         ratio_al = (ratio_al[0:1] + flip_tensor(ratio_al[1:2])) / 2
-        ratio_ba = (ratio_ba[0:1] + flip_tensor(ratio_ba[1:2])) / 2
+        ratio_bl = (ratio_bl[0:1] + flip_tensor(ratio_bl[1:2])) / 2
         theta = (theta[0:1] + flip_tensor(theta[1:2])) / 2
         reg = reg[0:1] if reg is not None else None
       torch.cuda.synchronize()
       forward_time = time.time()
-      dets = eldet_decode(hm, l, ratio_al=ratio_al, ratio_ba=ratio_ba, theta=theta, 
+      dets = eldet_decode(hm, l, ratio_al=ratio_al, ratio_bl=ratio_bl, theta=theta, 
                           reg=reg, cat_spec_wh=self.opt.cat_spec_wh, K=self.opt.K)
       
     if return_time:
@@ -52,7 +52,7 @@ class EldetDetector(BaseDetector):
       return output, dets
 
   def post_process(self, dets, meta, scale=1):
-    # dets = [bboxes, cx, cy, l, ratio_al, ratio_ba, thetas, scores, clses]
+    # dets = [bboxes, cx, cy, l, ratio_al, ratio_bl, thetas, scores, clses]
 
     dets = dets.detach().cpu().numpy()
     dets = dets.reshape(1, -1, dets.shape[2])

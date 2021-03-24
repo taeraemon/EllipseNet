@@ -5,7 +5,7 @@ from __future__ import print_function
 import _init_paths
 
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '5'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 import torch
 import torch.utils.data

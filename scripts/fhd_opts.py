@@ -121,10 +121,12 @@ class opts(object):
     self.parser.add_argument('--not_rand_crop', action='store_true',
                              help='not use the random crop data augmentation'
                                   'from CornerNet.')
+    self.parser.add_argument('--gaussian_noise', action='store_true',
+                             help='use Gaussian noise for augmentation')                                    
     self.parser.add_argument('--shift', type=float, default=0.1,
                              help='when not using random crop'
                                   'apply shift augmentation.')
-    self.parser.add_argument('--scale', type=float, default=0.4,
+    self.parser.add_argument('--scale', type=float, default=0.2,
                              help='when not using random crop'
                                   'apply scale augmentation.')
     self.parser.add_argument('--rotate', type=float, default=0,
@@ -342,7 +344,7 @@ class opts(object):
                    'reg': 2, 
                    'l': 1,
                    'ratio_al': 1, 
-                   'ratio_ba': 1, 
+                   'ratio_bl': 1, 
                    'theta': 1}
                    
     elif opt.task == 'multi_pose':

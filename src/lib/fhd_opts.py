@@ -17,6 +17,7 @@ class opts(object):
     self.parser.add_argument('--data_dir', default='/data/cc/Data/CHD/detection/')                    
     self.parser.add_argument('--exp_id', default='default')
     self.parser.add_argument('--test', action='store_true')
+    self.parser.add_argument('--save_image', action='store_true')
     self.parser.add_argument('--debug', type=int, default=0,
                              help='level of visualization.'
                                   '1: only show the final detection results'
@@ -83,7 +84,7 @@ class opts(object):
     # train
     self.parser.add_argument('--lr', type=float, default=1.25e-4, 
                              help='learning rate for batch size 32.')
-    self.parser.add_argument('--lr_step', type=str, default='90,120',
+    self.parser.add_argument('--lr_step', type=str, default='90,120,200,400',
                              help='drop learning rate by 10.')
     self.parser.add_argument('--num_epochs', type=int, default=140,
                              help='total training epochs.')
@@ -121,10 +122,12 @@ class opts(object):
     self.parser.add_argument('--not_rand_crop', action='store_true',
                              help='not use the random crop data augmentation'
                                   'from CornerNet.')
+    self.parser.add_argument('--gaussian_noise', action='store_true',
+                             help='use Gaussian noise for augmentation')          
     self.parser.add_argument('--shift', type=float, default=0.1,
                              help='when not using random crop'
                                   'apply shift augmentation.')
-    self.parser.add_argument('--scale', type=float, default=0.4,
+    self.parser.add_argument('--scale', type=float, default=0.2,
                              help='when not using random crop'
                                   'apply scale augmentation.')
     self.parser.add_argument('--rotate', type=float, default=0,
@@ -342,7 +345,7 @@ class opts(object):
                    'reg': 2, 
                    'l': 1,
                    'ratio_al': 1, 
-                   'ratio_ba': 1, 
+                   'ratio_bl': 1, 
                    'theta': 1}
                    
     elif opt.task == 'multi_pose':

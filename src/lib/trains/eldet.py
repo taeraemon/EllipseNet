@@ -35,7 +35,7 @@ class EldetLoss(torch.nn.Module):
   def forward(self, outputs, batch):
     opt = self.opt
     hm_loss, wh_loss, off_loss, ellipse_loss, iou_loss = 0, 0, 0, 0, 0
-    ratio_al_loss, ratio_ba_loss, theta_loss = 0, 0, 0
+    ratio_al_loss, ratio_bl_loss, theta_loss = 0, 0, 0
     for s in range(opt.num_stacks):
       output = outputs[s]
       if not opt.mse_loss:
@@ -86,14 +86,15 @@ class EldetLoss(torch.nn.Module):
         # ellipse_loss += self.crit_l1_loss(output['theta'], batch['theta']) / opt.num_stacks # theta
       ratio_al_loss = self.crit_reg(output['ratio_al'], batch['reg_mask'],
                             batch['ind'], batch['ratio_al']) / opt.num_stacks # ratio_al
-      ratio_ba_loss = self.crit_reg(output['ratio_ba'], batch['reg_mask'],
-                            batch['ind'], batch['ratio_ba']) / opt.num_stacks # ratio_ba
+      ratio_bl_loss = self.crit_reg(output['ratio_bl'], batch['reg_mask'],
+                            batch['ind'], batch['ratio_bl']) / opt.num_stacks # ratio_bl
       theta_loss = opt.theta_weight * self.crit_angle(output['theta'], batch['reg_mask'],
                             batch['ind'], batch['theta']) / opt.num_stacks # theta (where output['theta'] is (1, 1, 128, 128))
-      ellipse_loss = ellipse_loss + ratio_al_loss + ratio_ba_loss + theta_loss
+      ellipse_loss = ellipse_loss + ratio_al_loss + ratio_bl_loss + theta_loss
 
       # if opt.ellipse_reg_weight > 0:
-      cons = output['ratio_al'] ** 2 * (1 + output['ratio_ba'] ** 2)
+      # cons = output['ratio_al'] ** 2 * (1 + output['ratio_ba'] ** 2)
+      cons = output['ratio_al'] ** 2 + output['ratio_bl'] ** 2
       ellipse_loss += opt.ellipse_reg_weight * self.crit_mesloss(cons, torch.tensor(1.0).to(opt.device))
 
       # rotated iou loss
@@ -107,7 +108,7 @@ class EldetLoss(torch.nn.Module):
            opt.off_weight * off_loss + opt.ellipse_weight * ellipse_loss
     loss_stats = {'loss': loss, 'hm_loss': hm_loss, 'l_loss': wh_loss, 
                   'off_loss': off_loss, 'ellipse_loss': ellipse_loss,
-                  'ratio_al_loss': ratio_al_loss, 'ratio_ba_loss': ratio_ba_loss, 'theta_loss': theta_loss, 'iou_loss': iou_loss, 'iou': iou}
+                  'ratio_al_loss': ratio_al_loss, 'ratio_bl_loss': ratio_bl_loss, 'theta_loss': theta_loss, 'iou_loss': iou_loss, 'iou': iou}
     return loss, loss_stats
 
 class EldetTrainer(BaseTrainer):
@@ -116,7 +117,7 @@ class EldetTrainer(BaseTrainer):
   
   def _get_losses(self, opt):
     loss_states = ['loss', 'hm_loss', 'l_loss', 'off_loss', 'ellipse_loss', 'ratio_al_loss', 
-                    'ratio_ba_loss', 'theta_loss', 'iou_loss', 'iou']
+                    'ratio_bl_loss', 'theta_loss', 'iou_loss', 'iou']
     loss = EldetLoss(opt)
     return loss_states, loss
 

@@ -112,3 +112,7 @@ ENV/
 
 # Experiments
 exp/
+
+# ipython-notebook scripts
+scripts/
+

@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import torch.utils.data as data
+import random
 import numpy as np
 import torch
 import json
@@ -85,6 +86,12 @@ class ELDetDataset(data.Dataset):
     inp = (inp - self.mean) / self.std
     inp = inp.transpose(2, 0, 1)
 
+    if self.opt.gaussian_noise:
+      do_transform = np.random.random() < 0.1
+      if do_transform:
+        noise_std = np.random.uniform(0, 0.1)
+        noise = np.random.normal(0, noise_std, size=inp.shape)
+        inp += noise
     output_h = input_h // self.opt.down_ratio
     output_w = input_w // self.opt.down_ratio
     num_classes = self.num_classes
@@ -107,7 +114,8 @@ class ELDetDataset(data.Dataset):
     a = np.zeros((self.max_objs, 1), dtype=np.float32) # length of the long axis
     b = np.zeros((self.max_objs, 1), dtype=np.float32) # length of the short axis
     ratio_al = np.zeros((self.max_objs, 1), dtype=np.float32) # ratio of the long axis to the length of square
-    ratio_ba = np.zeros((self.max_objs, 1), dtype=np.float32) # ratio of the short axis to the long axis
+    ratio_bl = np.zeros((self.max_objs, 1), dtype=np.float32) # ratio of the short axis to the length of square
+    # ratio_ba = np.zeros((self.max_objs, 1), dtype=np.float32) # ratio of the short axis to the long axis
     theta = np.zeros((self.max_objs, 1), dtype=np.float32) # angle of the ellipse divided by pi (0, 1]
 
     # Generate ground truth label
@@ -148,14 +156,15 @@ class ELDetDataset(data.Dataset):
       b[k] = trans_output[0][0] * ellipse[3] # length of the short axis
       l[k] = 2 * math.sqrt(a[k] * a[k] + b[k] * b[k]) # length of the extended square
       ratio_al[k] = 2 * a[k] / l[k] # ratio of the long axis to the length of square
-      ratio_ba[k] = b[k] / a[k] # ratio of the short axis to the long axis
+      ratio_bl[k] = 2 * b[k] / l[k] # ratio of the short axis to the long axis
+      # ratio_ba[k] = b[k] / a[k] # ratio of the short axis to the long axis
       angle = ellipse[4] / math.pi # ratio of the short axis to the long axis
       angle = angle - 1 if angle > 0.5 else angle + 1 if angle < -0.5 else angle
       # angle = angle if angle >= 0 else 1 + angle
       theta[k] = -angle if flipped else angle
     
     # ret = {'input': inp, 'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh}
-    ret = {'input': inp, 'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh, 'a': a, 'b': b, 'l': l, 'ratio_al': ratio_al, 'ratio_ba': ratio_ba, 'theta': theta}
+    ret = {'input': inp, 'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh, 'a': a, 'b': b, 'l': l, 'ratio_al': ratio_al, 'ratio_bl': ratio_bl, 'theta': theta}
     if self.opt.dense_wh:
       hm_a = hm.max(axis=0, keepdims=True)
       dense_wh_mask = np.concatenate([hm_a, hm_a], axis=0)
