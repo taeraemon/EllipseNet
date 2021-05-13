@@ -13,10 +13,10 @@ try:
 except:
   print('NMS not imported! If you need it,'
         ' do \n cd $CenterNet_ROOT/src/lib/external \n make')
-from models.decode import eldet_decode
+from models.decode import eldet_decode, eldet_decode_sincos
 from models.utils import flip_tensor
 from utils.image import get_affine_transform
-from utils.post_process import eldet_post_process
+from utils.post_process import eldet_post_process, eldet_post_process_sincos
 from utils.debugger import Debugger
 
 from .base_detector import BaseDetector
@@ -33,18 +33,21 @@ class EldetDetector(BaseDetector):
       ratio_al = output["ratio_al"]
       ratio_bl = output["ratio_bl"]
       theta = output["theta"]
+      sincos = output["sincos"]
       reg = output['reg'] if self.opt.reg_offset else None
-      if self.opt.flip_test:
-        hm = (hm[0:1] + flip_tensor(hm[1:2])) / 2
-        l = (l[0:1] + flip_tensor(l[1:2])) / 2
-        ratio_al = (ratio_al[0:1] + flip_tensor(ratio_al[1:2])) / 2
-        ratio_bl = (ratio_bl[0:1] + flip_tensor(ratio_bl[1:2])) / 2
-        theta = (theta[0:1] + flip_tensor(theta[1:2])) / 2
-        reg = reg[0:1] if reg is not None else None
+      # if self.opt.flip_test:
+      #   hm = (hm[0:1] + flip_tensor(hm[1:2])) / 2
+      #   l = (l[0:1] + flip_tensor(l[1:2])) / 2
+      #   ratio_al = (ratio_al[0:1] + flip_tensor(ratio_al[1:2])) / 2
+      #   ratio_bl = (ratio_bl[0:1] + flip_tensor(ratio_bl[1:2])) / 2
+      #   theta = (theta[0:1] + flip_tensor(theta[1:2])) / 2
+      #   reg = reg[0:1] if reg is not None else None
       torch.cuda.synchronize()
       forward_time = time.time()
-      dets = eldet_decode(hm, l, ratio_al=ratio_al, ratio_bl=ratio_bl, theta=theta, 
-                          reg=reg, cat_spec_wh=self.opt.cat_spec_wh, K=self.opt.K)
+      dets = eldet_decode_sincos(hm, l, ratio_al=ratio_al, ratio_bl=ratio_bl, theta=theta, 
+                      sincos=sincos, reg=reg, cat_spec_wh=self.opt.cat_spec_wh, K=self.opt.K)
+      # dets = eldet_decode(hm, l, ratio_al=ratio_al, ratio_bl=ratio_bl, theta=theta, 
+      #                     reg=reg, cat_spec_wh=self.opt.cat_spec_wh, K=self.opt.K)
       
     if return_time:
       return output, dets, forward_time
@@ -52,15 +55,16 @@ class EldetDetector(BaseDetector):
       return output, dets
 
   def post_process(self, dets, meta, scale=1):
-    # dets = [bboxes, cx, cy, l, ratio_al, ratio_bl, thetas, scores, clses]
+    # dets = [bboxes{4}, cx, cy, l, ratio_al, ratio_bl, thetas, sincos{2}, scores, clses] #[14]
 
     dets = dets.detach().cpu().numpy()
     dets = dets.reshape(1, -1, dets.shape[2])
-    dets = eldet_post_process(
+    # dets = eldet_post_process(
+    dets = eldet_post_process_sincos(
         dets.copy(), [meta['c']], [meta['s']],
         meta['out_height'], meta['out_width'], self.opt.num_classes)
     for j in range(1, self.num_classes + 1):
-      dets[0][j] = np.array(dets[0][j], dtype=np.float32).reshape(-1, 11)
+      dets[0][j] = np.array(dets[0][j], dtype=np.float32).reshape(-1, 13)
       dets[0][j][:, :7] /= scale
     return dets[0]
 

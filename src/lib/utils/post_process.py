@@ -125,6 +125,31 @@ def eldet_post_process(dets, c, s, h, w, num_classes):
   return ret
 
 
+def eldet_post_process_sincos(dets, c, s, h, w, num_classes):
+  # dets: batch x max_dets x dim
+  # dets = [bboxes, cx, cy, l, ratio_al, ratio_ba, theta, sincos, scores, clses]
+  # return 1-based class det dict
+  ret = []
+  for i in range(dets.shape[0]):
+    top_preds = {}
+    dets[i, :, :2] = transform_preds(
+          dets[i, :, 0:2], c[i], s[i], (w, h))
+    dets[i, :, 2:4] = transform_preds(
+          dets[i, :, 2:4], c[i], s[i], (w, h))
+    dets[i, :, 4:6] = transform_preds( 
+          dets[i, :, 4:6], c[i], s[i], (w, h)) # center (xs, ys)
+    dets[i, :, 6] = transform_length( 
+          dets[i, :, 6], c[i], s[i], (w, h)) # l
+    classes = dets[i, :, -1]
+    for j in range(num_classes):
+      inds = (classes == j)
+      top_preds[j + 1] = np.concatenate([
+        dets[i, inds, :12].astype(np.float32),
+        dets[i, inds, -2:-1].astype(np.float32)], axis=1).tolist()
+    ret.append(top_preds)
+  return ret
+
+
 def multi_pose_post_process(dets, c, s, h, w):
   # dets: batch x max_dets x 40
   # return list of 39 in image coord

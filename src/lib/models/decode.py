@@ -8,6 +8,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from .utils import _gather_feat, _transpose_and_gather_feat
 
+import pdb
+
 def _nms(heat, kernel=3):
     pad = (kernel - 1) // 2
 
@@ -537,6 +539,44 @@ def eldet_decode(heat, l, ratio_al, ratio_bl, theta, reg=None, cat_spec_wh=False
     return detections
 
 
+def eldet_decode_sincos(heat, l, ratio_al, ratio_bl, theta, sincos, reg=None, cat_spec_wh=False, K=2): # Decode ellipse information with sin and cos
+    batch, cat, height, width = heat.size()
+
+    # heat = torch.sigmoid(heat)
+    # perform nms on heatmaps
+    heat = _nms(heat)
+      
+    scores, inds, clses, ys, xs = _topk(heat, K=K)
+    if reg is not None:
+      reg = _transpose_and_gather_feat(reg, inds)
+      reg = reg.view(batch, K, 2)
+      xs = xs.view(batch, K, 1) + reg[:, :, 0:1]
+      ys = ys.view(batch, K, 1) + reg[:, :, 1:2]
+    else:
+      xs = xs.view(batch, K, 1) + 0.5
+      ys = ys.view(batch, K, 1) + 0.5
+    l = _transpose_and_gather_feat(l, inds)
+    ratio_al = _transpose_and_gather_feat(ratio_al, inds)
+    ratio_bl = _transpose_and_gather_feat(ratio_bl, inds)
+    theta = _transpose_and_gather_feat(theta, inds)
+    sincos = _transpose_and_gather_feat(sincos, inds)
+    if cat_spec_wh:
+      l = l.view(batch, K, cat, 1)
+      clses_ind = clses.view(batch, K, 1, 1).expand(batch, K, 1, 2).long()
+      l = l.gather(1, clses_ind).view(batch, K, 1)
+    else:
+      l = l.view(batch, K, 1)
+    clses  = clses.view(batch, K, 1).float()
+    scores = scores.view(batch, K, 1)
+    bboxes = torch.cat([xs - l / 2, 
+                        ys - l / 2,
+                        xs + l / 2, 
+                        ys + l / 2], dim=2)
+    detections = torch.cat([bboxes, xs, ys, l, ratio_al, ratio_bl, theta, sincos, scores, clses], dim=2)
+      
+    return detections
+
+
 def decode_label_4iou(label, K=2): # Decode label for iou loss
     heat = label['hm']
     reg = label['reg']
@@ -582,7 +622,7 @@ def decode_output_4iou(output, K=2): # Decode output for iou loss
     l = output['l'] * 4 # (B, 1, w, h)
     ratio_al = output["ratio_al"] # (B, 1, w, h)
     ratio_bl = output["ratio_bl"] # (B, 1, w, h)
-    theta = output["theta"] # (B, 2, w, h)
+    theta = output["theta"] # (B, 1, w, h)
     reg = output['reg'] # (B, 2, w, h)
 
     batch, cat, height, width = heat.size()
@@ -608,6 +648,51 @@ def decode_output_4iou(output, K=2): # Decode output for iou loss
     angle = theta * math.pi
 
     bboxes = torch.cat([xs, ys, 2*a, 2*b, angle], dim=2)
+
+    temp_boxes = []
+    for batch_idx in range(batch):
+        temp_box = []
+        temp_box.append(bboxes[batch_idx, clses[batch_idx, 0], :])
+        temp_box.append(bboxes[batch_idx, clses[batch_idx, 1], :])
+        temp_box = torch.stack(temp_box, dim=0)
+        temp_boxes.append(temp_box)
+    bboxes = torch.stack(temp_boxes, dim=0)
+    return bboxes
+
+
+def decode_output_4iou_sincos(output, K=2): # Decode output for iou loss
+    heat = F.sigmoid(output['hm']) # (B, 2, w, h)
+    l = output['l'] * 4 # (B, 1, w, h)
+    ratio_al = output["ratio_al"] # (B, 1, w, h)
+    ratio_bl = output["ratio_bl"] # (B, 1, w, h)
+    # theta = output["theta"] # (B, 1, w, h)
+    sincos = output["sincos"] # (B, 2, w, h)
+    reg = output['reg'] # (B, 2, w, h)
+
+    batch, cat, height, width = heat.size()
+    heat = _nms(heat)
+    scores, inds, clses, ys, xs = _topk(heat, K=K)
+
+    if reg is not None:
+        reg = _transpose_and_gather_feat(reg, inds)  # (B, K, 1)
+        reg = reg.view(batch, K, 2)
+        xs = xs.view(batch, K, 1) * 4 + reg[:, :, 0:1]
+        ys = ys.view(batch, K, 1) * 4 + reg[:, :, 1:2]
+    else:
+        xs = xs.view(batch, K, 1) * 4 + 0.5
+        ys = ys.view(batch, K, 1) * 4 + 0.5
+
+    l = _transpose_and_gather_feat(l, inds) # (B, K, 1)
+    ratio_al = _transpose_and_gather_feat(ratio_al, inds) # (B, K, 1)
+    ratio_bl = _transpose_and_gather_feat(ratio_bl, inds) # (B, K, 1)
+    sincos = _transpose_and_gather_feat(sincos, inds) # (B, K, 1)
+    # theta = _transpose_and_gather_feat(theta, inds) # (B, K, 1)
+
+    a = l * ratio_al / 2
+    b = l * ratio_bl / 2
+    # angle = theta * math.pi
+
+    bboxes = torch.cat([xs, ys, 2*a, 2*b, sincos], dim=2)
 
     temp_boxes = []
     for batch_idx in range(batch):

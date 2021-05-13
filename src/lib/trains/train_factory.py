@@ -7,6 +7,8 @@ from .ddd import DddTrainer
 from .exdet import ExdetTrainer
 from .multi_pose import MultiPoseTrainer
 from .eldet import EldetTrainer
+# from .eldet_onlyangle import EldetTrainer
+# print("!!!Warning!!! This setting only regresses on angle")
 
 train_factory = {
   'exdet': ExdetTrainer, 

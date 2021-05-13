@@ -6,8 +6,7 @@ import torch
 import numpy as np
 
 from models.losses import FocalLoss
-from models.losses import RegL1Loss, RegLoss, NormRegL1Loss, RegWeightedL1Loss, L1LossRegression, RegL1Loss4Angle, IoULoss, IoULossSincos
-from models.decode import ctdet_decode
+from models.losses import RegL1Loss, RegLoss, NormRegL1Loss, RegWeightedL1Loss, L1LossRegression, RegL1Loss4Angle, IoULoss4Angle
 from models.utils import _sigmoid
 from utils.debugger import Debugger
 from utils.post_process import ctdet_post_process
@@ -29,7 +28,7 @@ class EldetLoss(torch.nn.Module):
     self.crit_l1_loss = torch.nn.L1Loss(reduction='elementwise_mean')
     self.crit_mesloss = torch.nn.MSELoss()
     self.crit_angle = RegL1Loss4Angle(use_smooth_l1=(opt.reg_loss=='sl1'))
-    self.iou_loss = IoULossSincos() if opt.sincos_weight else IoULoss() 
+    self.iou_loss = IoULoss4Angle()
     self.opt = opt
 
   def forward(self, outputs, batch):
@@ -55,49 +54,26 @@ class EldetLoss(torch.nn.Module):
           batch['ind'].detach().cpu().numpy(), 
           output['reg'].shape[3], output['reg'].shape[2])).to(opt.device)
 
-      hm_loss += self.crit(output['hm'], batch['hm']) / opt.num_stacks
+      hm_loss += 0 * self.crit(output['hm'], batch['hm']) / opt.num_stacks
       if opt.wh_weight > 0:
-        wh_loss += self.crit_reg(
+        wh_loss += 0 * self.crit_reg(
           output['l'], batch['reg_mask'],
           batch['ind'], batch['l']) / opt.num_stacks
-        # if opt.dense_wh:
-        #   mask_weight = batch['dense_wh_mask'].sum() + 1e-4
-        #   wh_loss += (
-        #     self.crit_wh(output['wh'] * batch['dense_wh_mask'],
-        #     batch['dense_wh'] * batch['dense_wh_mask']) / 
-        #     mask_weight) / opt.num_stacks
-        # elif opt.cat_spec_wh:
-        #   wh_loss += self.crit_wh(
-        #     output['wh'], batch['cat_spec_mask'],
-        #     batch['ind'], batch['cat_spec_wh']) / opt.num_stacks
-        # else:
-        #   wh_loss += self.crit_reg(
-        #     output['wh'], batch['reg_mask'],
-        #     batch['ind'], batch['wh']) / opt.num_stacks
-      
+
       if opt.reg_offset and opt.off_weight > 0:
-        off_loss += self.crit_reg(output['reg'], batch['reg_mask'],
+        off_loss += 0 * self.crit_reg(output['reg'], batch['reg_mask'],
                              batch['ind'], batch['reg']) / opt.num_stacks
 
       # ellipse loss
-      # if opt.ellipse_weight > 0:
-        # ellipse_loss += self.crit_l1_loss(output['ratio_al'], batch['ratio_al']) / opt.num_stacks # ratio_al
-        # ellipse_loss += self.crit_l1_loss(output['ratio_ba'], batch['ratio_ba']) / opt.num_stacks # ratio_ba
-        # ellipse_loss += self.crit_l1_loss(output['theta'], batch['theta']) / opt.num_stacks # theta
-      ratio_al_loss = self.crit_reg(output['ratio_al'], batch['reg_mask'],
+      ratio_al_loss = 0 * self.crit_reg(output['ratio_al'], batch['reg_mask'],
                             batch['ind'], batch['ratio_al']) / opt.num_stacks # ratio_al
-      ratio_bl_loss = self.crit_reg(output['ratio_bl'], batch['reg_mask'],
+      ratio_bl_loss = 0 * self.crit_reg(output['ratio_bl'], batch['reg_mask'],
                             batch['ind'], batch['ratio_bl']) / opt.num_stacks # ratio_bl
       theta_loss = opt.theta_weight * self.crit_angle(output['theta'], batch['reg_mask'],
                             batch['ind'], batch['theta']) / opt.num_stacks # theta (where output['theta'] is (1, 1, 128, 128))
       sincos_loss = opt.sincos_weight * self.crit_reg(output['sincos'], batch['reg_mask'],
                             batch['ind'], batch['sincos']) / opt.num_stacks # sincos
-      ellipse_loss = ellipse_loss + ratio_al_loss + ratio_bl_loss + theta_loss + sincos_loss
-
-      # if opt.ellipse_reg_weight > 0:
-      # cons = output['ratio_al'] ** 2 * (1 + output['ratio_ba'] ** 2)
-      cons = output['ratio_al'] ** 2 + output['ratio_bl'] ** 2
-      ellipse_loss += opt.ellipse_reg_weight * self.crit_mesloss(cons, torch.tensor(1.0).to(opt.device))
+      ellipse_loss = theta_loss + sincos_loss
 
       # rotated iou loss
       iou_loss, iou = self.iou_loss(output, batch)
@@ -106,8 +82,7 @@ class EldetLoss(torch.nn.Module):
 
 
         
-    loss = opt.hm_weight * hm_loss + opt.wh_weight * wh_loss + opt.iou_weight * iou_loss + \
-           opt.off_weight * off_loss + opt.ellipse_weight * ellipse_loss
+    loss = opt.iou_weight * iou_loss + opt.ellipse_weight * ellipse_loss
     loss_stats = {'loss': loss, 'hm_loss': hm_loss, 'l_loss': wh_loss, 
                   'off_loss': off_loss, 'ellipse_loss': ellipse_loss,
                   'ratio_al_loss': ratio_al_loss, 'ratio_bl_loss': ratio_bl_loss, 'theta_loss': theta_loss, 'sincos_loss': sincos_loss, 'iou_loss': iou_loss, 'iou': iou}

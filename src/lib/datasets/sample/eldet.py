@@ -117,26 +117,33 @@ class ELDetDataset(data.Dataset):
     ratio_bl = np.zeros((self.max_objs, 1), dtype=np.float32) # ratio of the short axis to the length of square
     # ratio_ba = np.zeros((self.max_objs, 1), dtype=np.float32) # ratio of the short axis to the long axis
     theta = np.zeros((self.max_objs, 1), dtype=np.float32) # angle of the ellipse divided by pi (0, 1]
+    sincos = np.zeros((self.max_objs, 2), dtype=np.float32) # encoded angle of the ellipse, sin and cos
 
     # Generate ground truth label
     gt_det = []
     for k in range(num_objs):
       ann = anns[k]
       bbox = self._coco_box_to_bbox(ann['bbox'])
+      ellipse = ann['ellipse']
+      ct = np.array(ellipse[:2], dtype=np.float32)
       cls_id = int(self.cat_ids[ann['category_id']])
       if flipped:
         bbox[[0, 2]] = width - bbox[[2, 0]] - 1
+        ct[0] = width - ct[0] - 1
       bbox[:2] = affine_transform(bbox[:2], trans_output)
       bbox[2:] = affine_transform(bbox[2:], trans_output)
       bbox[[0, 2]] = np.clip(bbox[[0, 2]], 0, output_w - 1)
       bbox[[1, 3]] = np.clip(bbox[[1, 3]], 0, output_h - 1)
       h, w = bbox[3] - bbox[1], bbox[2] - bbox[0]
+      ct = affine_transform(ct, trans_output)
+      ct[0] = np.clip(ct[0], 0, output_w - 1)
+      ct[1] = np.clip(ct[1], 0, output_h - 1)
       if h > 0 and w > 0:
         radius = gaussian_radius((math.ceil(h), math.ceil(w)))
         radius = max(0, int(radius))
         radius = self.opt.hm_gauss if self.opt.mse_loss else radius
-        ct = np.array(
-          [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2], dtype=np.float32)
+        # ct = np.array(
+        #   [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2], dtype=np.float32)
         ct_int = ct.astype(np.int32)
         draw_gaussian(hm[cls_id], ct_int, radius)
         wh[k] = 1. * w, 1. * h
@@ -151,20 +158,28 @@ class ELDetDataset(data.Dataset):
                        ct[0] + w / 2, ct[1] + h / 2, 1, cls_id])
 
       # parameters for ellipse regression
-      ellipse = ann['ellipse']
-      a[k] = trans_output[0][0] * ellipse[2] # length of the long axis
-      b[k] = trans_output[0][0] * ellipse[3] # length of the short axis
+      if ellipse[2] >= ellipse[3]:
+        ell_a = ellipse[2]
+        ell_b = ellipse[3]
+        ell_alpha = ellipse[4]
+      else:
+        ell_a = ellipse[3]
+        ell_b = ellipse[2]
+        ell_alpha = ellipse[4] + 0.5 * math.pi
+      a[k] = trans_output[0][0] * ell_a # length of the long axis
+      b[k] = trans_output[0][0] * ell_b # length of the short axis
       l[k] = 2 * math.sqrt(a[k] * a[k] + b[k] * b[k]) # length of the extended square
       ratio_al[k] = 2 * a[k] / l[k] # ratio of the long axis to the length of square
       ratio_bl[k] = 2 * b[k] / l[k] # ratio of the short axis to the long axis
       # ratio_ba[k] = b[k] / a[k] # ratio of the short axis to the long axis
-      angle = ellipse[4] / math.pi # ratio of the short axis to the long axis
+      angle = ell_alpha / math.pi # angle is in [-0.5, 0.5)
       angle = angle - 1 if angle > 0.5 else angle + 1 if angle < -0.5 else angle
       # angle = angle if angle >= 0 else 1 + angle
       theta[k] = -angle if flipped else angle
+      sincos[k] = [np.sin(theta[k] * math.pi), np.cos(theta[k] * math.pi)] # sin in [-1, 1], cos in [0, 1]
     
     # ret = {'input': inp, 'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh}
-    ret = {'input': inp, 'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh, 'a': a, 'b': b, 'l': l, 'ratio_al': ratio_al, 'ratio_bl': ratio_bl, 'theta': theta}
+    ret = {'input': inp, 'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh, 'a': a, 'b': b, 'l': l, 'ratio_al': ratio_al, 'ratio_bl': ratio_bl, 'theta': theta, 'sincos': sincos}
     if self.opt.dense_wh:
       hm_a = hm.max(axis=0, keepdims=True)
       dense_wh_mask = np.concatenate([hm_a, hm_a], axis=0)

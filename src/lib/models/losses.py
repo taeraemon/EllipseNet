@@ -14,9 +14,9 @@ import torch.nn as nn
 from .utils import _transpose_and_gather_feat
 import torch.nn.functional as F
 
-from .decode import decode_output_4iou, decode_label_4iou
+from .decode import decode_output_4iou, decode_label_4iou, decode_output_4iou_sincos
 from .Rotated_IoU.utiles import box2corners
-from .Rotated_IoU.oriented_iou_loss import cal_diou, cal_giou
+from .Rotated_IoU.oriented_iou_loss import cal_diou, cal_giou, cal_diou_sincos
 
 import pdb
 
@@ -206,6 +206,29 @@ class IoULoss(nn.Module):
     def forward(self, output, target):
         bbox_pred = decode_output_4iou(output)
         bbox_label = decode_label_4iou(target)
+        iou_loss, iou = cal_diou(bbox_pred, bbox_label)
+        return iou_loss, iou
+
+
+class IoULossSincos(nn.Module):
+    def __init__(self):
+        super(IoULossSincos, self).__init__()
+
+    def forward(self, output, target):
+        bbox_pred = decode_output_4iou_sincos(output)
+        bbox_label = decode_label_4iou(target)
+        iou_loss, iou = cal_diou_sincos(bbox_pred, bbox_label)
+        return iou_loss, iou
+
+
+class IoULoss4Angle(nn.Module):
+    def __init__(self):
+        super(IoULoss4Angle, self).__init__()
+
+    def forward(self, output, target):
+        bbox_pred = decode_output_4iou(output)
+        bbox_label = decode_label_4iou(target)
+        bbox_pred[:, :, 0:4] = bbox_label[:, :, 0:4]
         iou_loss, iou = cal_diou(bbox_pred, bbox_label)
         return iou_loss, iou
 

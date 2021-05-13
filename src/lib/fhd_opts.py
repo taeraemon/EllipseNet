@@ -84,7 +84,7 @@ class opts(object):
     # train
     self.parser.add_argument('--lr', type=float, default=1.25e-4, 
                              help='learning rate for batch size 32.')
-    self.parser.add_argument('--lr_step', type=str, default='90,120,200,400',
+    self.parser.add_argument('--lr_step', type=str, default='80,120,200,400',
                              help='drop learning rate by 10.')
     self.parser.add_argument('--num_epochs', type=int, default=140,
                              help='total training epochs.')
@@ -127,7 +127,7 @@ class opts(object):
     self.parser.add_argument('--shift', type=float, default=0.1,
                              help='when not using random crop'
                                   'apply shift augmentation.')
-    self.parser.add_argument('--scale', type=float, default=0.2,
+    self.parser.add_argument('--scale', type=float, default=0,
                              help='when not using random crop'
                                   'apply scale augmentation.')
     self.parser.add_argument('--rotate', type=float, default=0,
@@ -187,7 +187,14 @@ class opts(object):
     self.parser.add_argument('--ellipse_reg_weight', type=float, default=0,
                              help='loss weight for ellipse l, a, b constrain.')   
     self.parser.add_argument('--theta_weight', type=float, default=1,
-                             help='loss weight for angle regression.')                      
+                             help='loss weight for angle regression.')     
+    self.parser.add_argument('--sincos_weight', type=float, default=0,
+                             help='loss weight for sin/cos regression.')   
+    self.parser.add_argument('--num_angle_bins', type=int, default=0,
+                             help='number of angle bins.')
+    self.parser.add_argument('--angle_bins_weight', type=float, default=0,
+                             help='weight of angle bins classification.')
+                                            
     
     # task
     # ctdet
@@ -347,6 +354,11 @@ class opts(object):
                    'ratio_al': 1, 
                    'ratio_bl': 1, 
                    'theta': 1}
+      # if opt.sincos_weight > 0:
+      opt.heads.update({'sincos': 2})
+
+      if opt.num_angle_bins > 0:
+        opt.heads.update({'angle_bins': opt.num_angle_bins})
                    
     elif opt.task == 'multi_pose':
       # assert opt.dataset in ['coco_hp']

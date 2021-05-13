@@ -14,8 +14,8 @@ echo "Exp3 Done!"
 python evaluate.py eldet --load_model ../exp/eldet/exp4_base_theta5_iou01/${MODEL_FILE}.pth > ../exp/logs/exp4_${MODEL_FILE}.txt
 echo "Exp4 Done!"
 
-python evaluate.py eldet --load_model ../exp/eldet/exp5_base_theta5_iou_step/${MODEL_FILE}.pth > ../exp/logs/exp5_${MODEL_FILE}.txt
-echo "Exp5 Done!"
+# python evaluate.py eldet --load_model ../exp/eldet/exp5_base_theta5_iou_step/${MODEL_FILE}.pth > ../exp/logs/exp5_${MODEL_FILE}.txt
+# echo "Exp5 Done!"
 
-python evaluate.py eldet --load_model ../exp/eldet/exp6_base_onlyiou/${MODEL_FILE}.pth > ../exp/logs/exp6_${MODEL_FILE}.txt
-echo "All Done!"
+# python evaluate.py eldet --load_model ../exp/eldet/exp6_base_onlyiou/${MODEL_FILE}.pth > ../exp/logs/exp6_${MODEL_FILE}.txt
+# echo "All Done!"

@@ -158,7 +158,17 @@ if __name__ == '__main__':
 
                 # Annotations
                 ann = anns[class_idx]
-                cx_gt, cy_gt, a_gt, b_gt, theta_gt = ann['ellipse']
+                ellipse = ann['ellipse']
+                cx_gt = ellipse[0]
+                cy_gt = ellipse[1]
+                if ellipse[2] >= ellipse[3]:
+                    a_gt = ellipse[2]
+                    b_gt = ellipse[3]
+                    theta_gt = ellipse[4]
+                else:
+                    a_gt = ellipse[3]
+                    b_gt = ellipse[2]
+                    theta_gt = ellipse[4] + 0.5 * math.pi
                 theta_gt = theta_gt / math.pi
                 theta_gt = theta_gt - 1 if theta_gt > 0.5 else theta_gt + 1 if theta_gt < -0.5 else theta_gt
                 l_gt = 2 * math.sqrt(a_gt ** 2 + b_gt ** 2)
