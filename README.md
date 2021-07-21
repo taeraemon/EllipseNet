@@ -2,7 +2,7 @@
 Accepted by MICCAI 2021
 
 ![](readme/EllipseNet.png)
-    
+<p align="center"> <img src='readme/EllipseNet.png' align="center" height="230px"> </p>    
     
 ## Abstract 
 
@@ -26,7 +26,7 @@ Please refer to [INSTALL.md](readme/INSTALL.md) for installation instructions.
 
 ## Use EllipseNet
 
-`ret` will be a python dict: `{category_id : [[x1, y1, a, b, theta], ...], }`
+Detection result will be a python dict: `{category_id : [[x1, y1, a, b, theta], ...], }`
 
 ## Benchmark Evaluation and Training
 
