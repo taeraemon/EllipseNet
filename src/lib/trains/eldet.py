@@ -6,11 +6,11 @@ import torch
 import numpy as np
 
 from models.losses import FocalLoss
-from models.losses import RegL1Loss, RegLoss, NormRegL1Loss, RegWeightedL1Loss, L1LossRegression, RegL1Loss4Angle, IoULoss, IoULossSincos
-from models.decode import ctdet_decode
+from models.losses import RegL1Loss, RegLoss, NormRegL1Loss, RegWeightedL1Loss, L1LossRegression, RegL1Loss4Angle, IoULoss
+from models.decode import eldet_decode
 from models.utils import _sigmoid
 from utils.debugger import Debugger
-from utils.post_process import ctdet_post_process
+from utils.post_process import eldet_post_process
 from utils.oracle_utils import gen_oracle_map
 from .base_trainer import BaseTrainer
 
@@ -29,7 +29,7 @@ class EldetLoss(torch.nn.Module):
     self.crit_l1_loss = torch.nn.L1Loss(reduction='elementwise_mean')
     self.crit_mesloss = torch.nn.MSELoss()
     self.crit_angle = RegL1Loss4Angle(use_smooth_l1=(opt.reg_loss=='sl1'))
-    self.iou_loss = IoULossSincos() if opt.sincos_weight else IoULoss() 
+    self.iou_loss = IoULoss() 
     self.opt = opt
 
   def forward(self, outputs, batch):
@@ -126,7 +126,7 @@ class EldetTrainer(BaseTrainer):
   def debug(self, batch, output, iter_id):
     opt = self.opt
     reg = output['reg'] if opt.reg_offset else None
-    dets = ctdet_decode(
+    dets = eldet_decode(
       output['hm'], output['wh'], reg=reg,
       cat_spec_wh=opt.cat_spec_wh, K=opt.K)
     dets = dets.detach().cpu().numpy().reshape(1, -1, dets.shape[2])
@@ -162,11 +162,11 @@ class EldetTrainer(BaseTrainer):
 
   def save_result(self, output, batch, results):
     reg = output['reg'] if self.opt.reg_offset else None
-    dets = ctdet_decode(
+    dets = eldet_decode(
       output['hm'], output['wh'], reg=reg,
       cat_spec_wh=self.opt.cat_spec_wh, K=self.opt.K)
     dets = dets.detach().cpu().numpy().reshape(1, -1, dets.shape[2])
-    dets_out = ctdet_post_process(
+    dets_out = eldet_post_process(
       dets.copy(), batch['meta']['c'].cpu().numpy(),
       batch['meta']['s'].cpu().numpy(),
       output['hm'].shape[2], output['hm'].shape[3], output['hm'].shape[1])

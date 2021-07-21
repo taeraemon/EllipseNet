@@ -14,7 +14,7 @@ class opts(object):
                              help='ctdet | ddd | multi_pose | exdet | eldet | eldet_bbox')
     self.parser.add_argument('--dataset', default='coco_fhd',
                              help='coco | kitti | coco_hp | pascal | coco_fhd')
-    self.parser.add_argument('--data_dir', default='/data/cc/Data/CHD/detection/')                    
+    self.parser.add_argument('--data_dir', default='/userhome/workspace/Data/CHD/detection')                    
     self.parser.add_argument('--exp_id', default='default')
     self.parser.add_argument('--test', action='store_true')
     self.parser.add_argument('--save_image', action='store_true')
@@ -88,7 +88,7 @@ class opts(object):
                              help='drop learning rate by 10.')
     self.parser.add_argument('--num_epochs', type=int, default=140,
                              help='total training epochs.')
-    self.parser.add_argument('--batch_size', type=int, default=32,
+    self.parser.add_argument('--batch_size', type=int, default=16,
                              help='batch size')
     self.parser.add_argument('--master_batch_size', type=int, default=-1,
                              help='batch size on the master gpu.')
