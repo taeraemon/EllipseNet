@@ -13,8 +13,8 @@ As an important scan plane, four chamber view is routinely performed in both sec
 
 ### Experimental Results
 
-| Methods     |  Setting | $Dice_T$ |  $Dice_C$  |  $Dice_{all}$ |   $P_{avg}$ | 
-|--------------|-----------|--------------|----------------------|-------------|
+| Methods  |  Setting | $Dice_T$ |  $Dice_C$  |  $Dice_{all}$ |   $P_{avg}$ | 
+|----------|----------|----------|------------|---------------|-------------|
 |EllipseNet (exp6) | only IoU loss | 0.8813 | 0.8520 | 0.8666 | 0.8855 |
 |EllipseNet (exp1) | w/o IoU loss  | 0.9338 | 0.9108 | 0.9224 | 0.8841 |
 |EllipseNet (exp3) | w/ IoU loss   | **0.9430** | **0.9224** | **0.9336** | **0.8949** |
@@ -33,6 +33,7 @@ Please refer to [INSTALL.md](readme/INSTALL.md) for installation instructions.
 After [installation](readme/INSTALL.md), prepare the elliptical dataset in coco-format. An example script is given in [scripts](scripts)/prepare_label.ipynb.
 We provide scripts for all the experiments in the [experiments](experiments) folder.
 
+Usage:
 ~~~
 chmod +x experiments/miccai21/*.sh
 ./experiments/miccai21/exp3_base_theta5_iou.sh
