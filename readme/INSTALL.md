@@ -1,26 +1,22 @@
 # Installation
 
 
-The code was tested on Ubuntu 16.04, with [Anaconda](https://www.anaconda.com/download) Python 3.6 and [PyTorch]((http://pytorch.org/)) v0.4.1. NVIDIA GPUs are needed for both training and testing.
+The code was tested on Ubuntu 16.04, with [Anaconda](https://www.anaconda.com/download) Python 3.6 and [PyTorch]((http://pytorch.org/)) v1.7.0. NVIDIA GPUs are needed for both training and testing.
 After install Anaconda:
 
 0. [Optional but recommended] create a new conda environment. 
 
     ~~~
-    conda create --name CenterNet python=3.6
+    conda create --name EllipseNet python=3.6
     ~~~
     And activate the environment.
     
     ~~~
-    conda activate CenterNet
+    conda activate EllipseNet
     ~~~
 
-1. Install pytorch0.4.1:
+1. Install pytorch:
 
-    ~~~
-    conda install pytorch=0.4.1 torchvision -c pytorch
-    ~~~
-    
     And disable cudnn batch normalization(Due to [this issue](https://github.com/xingyizhou/pytorch-pose-hg-3d/issues/16)).
     
      ~~~
@@ -46,8 +42,8 @@ After install Anaconda:
 3. Clone this repo:
 
     ~~~
-    CenterNet_ROOT=/path/to/clone/CenterNet
-    git clone https://github.com/xingyizhou/CenterNet $CenterNet_ROOT
+    EllipseNet_ROOT=/path/to/clone/EllipseNet
+    git clone https://git.openi.org.cn/capepoint/EllipseNet $EllipseNet_ROOT
     ~~~
 
 
@@ -64,11 +60,5 @@ After install Anaconda:
     cd $CenterNet_ROOT/src/lib/models/networks/DCNv2
     ./make.sh
     ~~~
-6. [Optional, only required if you are using extremenet or multi-scale testing] Compile NMS if your want to use multi-scale testing or test ExtremeNet.
 
-    ~~~
-    cd $CenterNet_ROOT/src/lib/external
-    make
-    ~~~
-
-7. Download pertained models for [detection]() or [pose estimation]() and move them to `$CenterNet_ROOT/models/`. More models can be found in [Model zoo](MODEL_ZOO.md).
+6. Download pertained models for testing.
