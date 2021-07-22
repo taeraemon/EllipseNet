@@ -20,7 +20,7 @@ After install Anaconda:
     And disable cudnn batch normalization(Due to [this issue](https://github.com/xingyizhou/pytorch-pose-hg-3d/issues/16)).
     
      ~~~
-    # PYTORCH=/path/to/pytorch # usually ~/anaconda3/envs/CenterNet/lib/python3.6/site-packages/
+    # PYTORCH=/path/to/pytorch # usually ~/anaconda3/envs/EllipseNet/lib/python3.6/site-packages/
     # for pytorch v0.4.0
     sed -i "1194s/torch\.backends\.cudnn\.enabled/False/g" ${PYTORCH}/torch/nn/functional.py
     # for pytorch v0.4.1
@@ -57,7 +57,7 @@ After install Anaconda:
 5. Compile deformable convolutional (from [DCNv2](https://github.com/CharlesShang/DCNv2/tree/pytorch_0.4)).
 
     ~~~
-    cd $CenterNet_ROOT/src/lib/models/networks/DCNv2
+    cd $EllipseNet_ROOT/src/lib/models/networks/DCNv2
     ./make.sh
     ~~~
 
