@@ -1,8 +1,8 @@
 # EllipseNet: Anchor-Free Ellipse Detection for Automatic Cardiac Biometrics in Fetal Echocardiography
-Accepted by MICCAI 2021
+To appear in MICCAI 2021
 
 ![](readme/EllipseNet.png)
-<p align="center"> <img src='readme/EllipseNet.png' align="center" height="230px"> </p>    
+ 
     
 ## Abstract 
 
