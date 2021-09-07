@@ -1,6 +1,13 @@
 # Installation
 
-The code was tested on Ubuntu 16.04, with [Anaconda](https://www.anaconda.com/download) Python 3.6 and [PyTorch]((http://pytorch.org/)) v1.7.0. NVIDIA GPUs are needed for both training and testing. We recommend you to use the virual environment provised by anaconda.
+## Requirements
+
+* Ubuntu 16.04
+* Python 3.6+
+* [PyTorch]((http://pytorch.org/)) 1.7.0+ 
+* GPU
+
+
 
 2. Install [COCOAPI](https://github.com/cocodataset/cocoapi)
 
