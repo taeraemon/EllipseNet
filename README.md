@@ -33,9 +33,8 @@ chmod +x experiments/miccai21/*.sh
 
 ## Reproduction
 
-You can use docker to ease the reproduction, we provide the docker image. 
+If you need the docker for reproduction, please contact via email. We will provide the docker image. 
 
-[[Docker](https://pan.baidu.com/s/1WpaVgcZhMW3w4oKgYwIxCw)], Retreieval Code: wqj5
 
 
 
