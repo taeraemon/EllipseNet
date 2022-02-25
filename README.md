@@ -1,5 +1,5 @@
 # EllipseNet: Anchor-Free Ellipse Detection for Automatic Cardiac Biometrics in Fetal Echocardiography (MICCAI-2021)
-by Jiancong Chen, Yingying Zhang, Jingyi Wang, Xiaoxue Zhou, Yihua He, Tong Zhang. 
+by Jiancong Chen, Yingying Zhang, Jingyi Wang, Xiaoxue Zhou, Yihua He*, Tong Zhang*. 
 
 This repo contains the **official pytorch implemetation** for EllipseNet.
 
