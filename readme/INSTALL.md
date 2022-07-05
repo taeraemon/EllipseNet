@@ -40,7 +40,7 @@
     cd $EllipseNet_ROOT/src/lib/models/networks/DCNv2
     export TORCH_CUDA_ARCH_LIST=7.5 # May need for hardware related issue
     rm -rf build
-    ./make.sh
+    bash ./make.sh
     ~~~
 
 6. Compile **Rotated_IOU related operation** 
