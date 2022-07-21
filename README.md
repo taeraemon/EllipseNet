@@ -47,7 +47,7 @@ Portions of the code are borrowed from [CenterNet](https://github.com/xingyizhou
 
 If you find this project useful for your research, please use the following BibTeX entry.
 
-Chen J., Zhang Y., Wang J., Zhou X., He Y., Zhang T. (2021) EllipseNet: Anchor-Free Ellipse Detection for Automatic Cardiac Biometrics in Fetal Echocardiography. In: de Bruijne M. et al. (eds) Medical Image Computing and Computer Assisted Intervention – MICCAI 2021. MICCAI 2021. Lecture Notes in Computer Science, vol 12907. Springer, Cham. https://doi.org/10.1007/978-3-030-87234-2_21
+Chen J., Zhang Y., Wang J., Zhou X., He Y., Zhang T*. (2021) EllipseNet: Anchor-Free Ellipse Detection for Automatic Cardiac Biometrics in Fetal Echocardiography. In: de Bruijne M. et al. (eds) Medical Image Computing and Computer Assisted Intervention – MICCAI 2021. MICCAI 2021. Lecture Notes in Computer Science, vol 12907. Springer, Cham. https://doi.org/10.1007/978-3-030-87234-2_21
 
 ## Contact
 
