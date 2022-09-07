@@ -3,6 +3,8 @@ by Jiancong Chen, Yingying Zhang, Jingyi Wang, Xiaoxue Zhou, Yihua He*, Tong Zha
 
 This repo contains the **official pytorch implemetation** for EllipseNet.
 
+Please refer to https://git.openi.org.cn/OpenMedIA/EllipseFit.Mindspore for a MindSpore version. Please be noted that the MindSpore version is not an Ellipse Detection Framework but using a 2D Unet to train a segmentation network and then using ellipses to fit the segmentation results.  
+
 ## Framework
 
 ![](readme/EllipseNet.png)
