@@ -1,6 +1,6 @@
 # 
 <h1 align="left"> An Official PyTorch Implementation of “EllipseNet: Anchor-Free Ellipse Detection for Automatic Cardiac Biometrics in Fetal Echocardiography (MICCAI-2021)” <a href="https://arxiv.org/abs/2109.12474"><img src="https://img.shields.io/badge/arXiv-Paper-<COLOR>.svg" ></a></h1>
-by Jiancong Chen, Yingying Zhang, Jingyi Wang, Xiaoxue Zhou, Yihua He*, Tong Zhang*. 
+by Jiancong Chen#, Yingying Zhang#, Jingyi Wang, Xiaoxue Zhou, Yihua He*, Tong Zhang*. 
 
 This repo contains the **official pytorch implemetation** for EllipseNet.
 
