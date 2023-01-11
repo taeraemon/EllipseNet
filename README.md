@@ -2,7 +2,7 @@
 <h1 align="left"> An Official PyTorch Implementation of “EllipseNet: Anchor-Free Ellipse Detection for Automatic Cardiac Biometrics in Fetal Echocardiography (MICCAI-2021)” <a href="https://arxiv.org/abs/2109.12474"><img src="https://img.shields.io/badge/arXiv-Paper-<COLOR>.svg" ></a></h1>
 by Jiancong Chen#, Yingying Zhang#, Jingyi Wang, Xiaoxue Zhou, Yihua He*, Tong Zhang*. 
 
-This repo contains the **official pytorch implemetation** for EllipseNet.
+This repo contains the **official PyTorch implemetation** for EllipseNet.
 
 Please refer to https://git.openi.org.cn/OpenMedIA/EllipseFit.Mindspore for a MindSpore version. Please be noted that the MindSpore version is not an Ellipse Detection Framework but using a 2D Unet to train a segmentation network and then using ellipses to fit the segmentation results.  
 
